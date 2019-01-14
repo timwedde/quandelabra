@@ -22,6 +22,11 @@ If this works for you, great!
 If you got improvements, even better, send me a pull request!  
 If it doesn't work, let me know and I'l try my best to ignore it. *Just kidding, I gotta keep my GitHub cred high.*
 
+## Rate Limits
+Please be aware of the [rate limits](https://help.quandl.com/article/68-is-there-a-rate-limit-or-speed-limit-for-api-usage) imposed by the API itself.  
+Free users may only be able to run 3 to 4 requests concurrently, while users with at least one Premium subscription can get away with 50 to 100 requests, depending on their network speed. If the dataset you're downloading is free, the reduced rate limits will still apply.  
+This tool can also be useful for premium users since the API only allows 10 bulk downloads of a dataset per hour. If you need more, you can use this tool to do so.
+
 ## Installation
 Quandelabra is a simple Python script, so the installation procedure is a very complex and error-prone process which works as follows:
 
