@@ -6,11 +6,15 @@ warnings.filterwarnings("ignore")
 
 ### System ###
 import os
+import io
 import sys
+import csv
+import time
 import asyncio
 import argparse
 import requests
 from shutil import rmtree
+from zipfile import ZipFile
 from signal import signal, SIGINT, SIG_IGN
 from aiohttp import ClientSession, TCPConnector
 
@@ -73,9 +77,29 @@ def on_done(task_result):
 
 
 async def main(args):
-    print("Downloading ticker list")
-    r = requests.get("https://s3.amazonaws.com/quandl-production-static/coverage/WIKI_PRICES.csv", verify=False)
-    tickers = r.text.split("\n")[1:]
+    if os.path.isfile("metadata.zip"):
+        print("Last metadata download is out of date, clearing cache")
+        second_since_last_download = time.time() - os.path.getmtime("metadata.zip")
+        if second_since_last_download > 86400:
+            os.remove("metadata.zip")
+
+    if not os.path.isfile("metadata.zip"):
+        print("Downloading metadata")
+        ticker_list_url = "https://www.quandl.com/api/v3/databases/{}/metadata?api_key={}".format(args.dataset,
+                                                                                                  args.api_key)
+        response = requests.get(ticker_list_url, verify=False, stream=True)
+        with open("metadata.zip", "wb") as f:
+            for chunk in response.iter_content(chunk_size=512):
+                if chunk:
+                    f.write(chunk)
+
+    with ZipFile("metadata.zip", "r") as zip_file:
+        with zip_file.open(zip_file.namelist()[0]) as metadata_file:
+            data = io.TextIOWrapper(metadata_file)
+            reader = csv.reader(data)
+            tickers = [line[0] for line in reader]
+
+    print("Found {} tickers".format(len(tickers)))
 
     print("Starting downloads")
     connector = TCPConnector(limit=None)
@@ -85,7 +109,8 @@ async def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="A tiny tool for quickly downloading large (and free) datasets from Quandl.")
+    parser = argparse.ArgumentParser(
+        description="A tiny tool for quickly downloading large (and free) datasets from Quandl.")
     parser.add_argument("-d", "--dataset", type=str, dest="dataset", required=True,
                         metavar="quandl_code", help="(required) The Quandl Code for the dataset to download")
     parser.add_argument("-a", "--api_key", type=str, dest="api_key", required=True,
